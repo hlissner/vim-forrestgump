@@ -1,6 +1,6 @@
 " *vim-forrestgump*     Run code on-the-fly in vim
 "
-" Version: 0.0.1
+" Version: 0.0.2
 " Author:  Henrik Lissner <http://henrik.io>
 
 if exists("g:loadedForrestGump")
@@ -14,6 +14,10 @@ let g:loadedForrestGump = 1
 
 if !exists("b:fgBin")
     let b:fgBin = ""
+endif
+
+if !exists(g:fgTypes)
+    let g:fgTypes = {}
 endif
 
 
@@ -65,21 +69,26 @@ func! s:fgRunRange() range
     echo join(getline(a:firstline, a:lastline), "\n")
     redir END
 
-    " Run the interpreter on it and save output to file
+    " Run tmpfile through interpreter and redir back to tmpfile (recycle!)
     redir > dst
     silent exe "!".type[0]." ".shellescape(dst)
     redir END
 
+    " Display it in a preview buffer
     call MlPreview(dst)
 endfunc
 
 " Open a preview window and inject output into it
 func! s:fgPreview(tmpfile)
+    " Open preview buffer
     silent exe ":pedit! ".a:tmpfile
+
+    " Switch to preview window
     wincmd P
     setl buftype=nofile noswapfile syntax=none bufhidden=delete
     nnoremap <buffer> <Esc> :pclose<CR>
 
+    " Delete the temp file
     if call delete(expand(tmpfile)) != 0
         echoe "ForrestGump: Could not delete temp file."
     endif
@@ -87,18 +96,19 @@ endfunc
 
 " For setting default filetype => bins
 func! s:fgDefineGump(filetype, opts)
-    if !exists(g:fgTypes)
-        let g:fgTypes = {}
-    endif
     if !has_key(g:fgTypes, filetype)
         let g:fgTypes[a:filetype] = opts
     endif
 endfunc
 
-call s:fgDefineGump("php",    ["php", "<?php"])
-call s:fgDefineGump("python", ["python"])
-call s:fgDefineGump("ruby",   ["ruby"])
-call s:fgDefineGump("sh",     ["sh"])
+" Default gumps
+call s:fgDefineGump("php",          ["php", "<?php"])
+call s:fgDefineGump("python",       ["python"])
+call s:fgDefineGump("ruby",         ["ruby"])
+call s:fgDefineGump("perl",         ["perl"])
+call s:fgDefineGump("javascript",   ["node"])
+call s:fgDefineGump("coffee",       ["coffee"])
+call s:fgDefineGump("sh",           ["sh"])
 
 
 """"""""""""""""""""""""""
