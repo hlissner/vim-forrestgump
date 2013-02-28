@@ -16,10 +16,6 @@ if !exists("b:fgBin")
     let b:fgBin = ""
 endif
 
-if !exists("fgPrepend")
-    let b:fgPrepend = ""
-endif
-
 
 """"""""""""""""""""""""""
 " Functions
