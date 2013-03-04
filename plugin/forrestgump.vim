@@ -21,7 +21,7 @@ let g:loaded_forrestgump = 1
     endif
 
     if !exists("b:forrestgump_bin")
-        let b:forrestgump_bin = ""
+        let b:forrestgump_bin = 0
     endif
 
 " }
@@ -33,7 +33,7 @@ let g:loaded_forrestgump = 1
     " Run entire current file (or line) through the appropriate interpreter
     " (e.g.  PHP, ruby, etc) and put it in a preview window.
     func! s:run()
-        if s:findGump() == 0
+        if !s:findGump()
             return
         endif
 
@@ -44,7 +44,7 @@ let g:loaded_forrestgump = 1
     " runRage() {
     " Run selected lines through an interpreter
     func! s:runRange() range
-        if s:findGump() == 0
+        if !s:findGump()
             return
         endif
 
@@ -128,12 +128,17 @@ let g:loaded_forrestgump = 1
     " findGump() {
     " Check to see if a gump for the current filetype exists or not
     func! s:findGump()
-        if !exists("b:forrestgump_bin") || strlen(b:forrestgump_bin) == 0
+        if b:forrestgump_bin == 0
+            if !has("&filetype")
+                echom "No filetype specified!"
+                return
+            endif
             let ft = split(&filetype, "\\.")[0]
             if has_key(g:forrestgump_types, ft)
                 let b:forrestgump_bin = g:forrestgump_types[ft][0]
             else
-                return 0
+                echom "No gump available for this filetype!"
+                return
             endif
         endif
         return 1
