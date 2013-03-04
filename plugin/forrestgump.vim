@@ -129,7 +129,7 @@ let g:loaded_forrestgump = 1
     " Check to see if a gump for the current filetype exists or not
     func! s:findGump()
         if b:forrestgump_bin == 0
-            if !has("&filetype")
+            if !strlen(&filetype)
                 echom "No filetype specified!"
                 return
             endif
