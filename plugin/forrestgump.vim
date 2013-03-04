@@ -3,10 +3,10 @@
 " Version: 0.1.0
 " Author:  Henrik Lissner <http://henrik.io>
 
-" if exists("g:loaded_forrestgump")
-"     finish
-" endif
-" let g:loaded_forrestgump = 1
+if exists("g:loaded_forrestgump")
+    finish
+endif
+let g:loaded_forrestgump = 1
 
 
 """"""""""""""""""""""""""
