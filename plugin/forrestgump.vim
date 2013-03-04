@@ -32,10 +32,7 @@ let g:loaded_forrestgump = 1
             return
         endif
 
-        let src = expand("%")
-        let dst = tempname()
-
-        call s:runGump(dst)
+        call s:runGump(tempname())
     endfunc
 
     " Run selected lines through an interpreter
@@ -84,10 +81,14 @@ let g:loaded_forrestgump = 1
 
     "
     func! s:runGump(file)
-        " See if b:fg_bin exists
-        if !executable(b:fg) != 1
-            echoe "ERROR: " b:fg." not found. Is it installed?"
-            return 0
+        " See if b:fg_bin is set and exists
+        if !exists(b:fg_bin)
+            echoe "No binary is set for this filetype."
+            return
+        endif
+        if !executable(b:fg_bin) != 1
+            echoe "ERROR: ".b:fg_bin." not found. Is it installed?"
+            return
         endif
 
         let prefix = expand("%") == "" ? 'w ' : ''
@@ -99,8 +100,6 @@ let g:loaded_forrestgump = 1
 
         " Display it in a preview buffer
         call MlPreview(dst)
-
-        return 1
     endfunc
 
 " }}
