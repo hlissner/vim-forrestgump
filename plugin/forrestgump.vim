@@ -12,120 +12,125 @@ let g:loadedForrestGump = 1
 """"""""""""""""""""""""""
 " Defaults
 
-if !exists("b:fgBin")
-    let b:fgBin = ""
+if !exists("b:fg_bin")
+    let b:fg_bin = ""
 endif
 
-if !exists(g:fgTypes)
-    let g:fgTypes = {}
+if !exists(g:types)
+    let g:types = {}
 endif
 
 
 """"""""""""""""""""""""""
-" Functions
+" Functions {{
 
-" Run entire current file (or line) through the appropriate interpreter
-" (e.g.  PHP, ruby, etc) and put it in a preview window.
-func! s:fgRun()
-    if !exists("b:fgBin")
-        return
-    endif
+    " Run entire current file (or line) through the appropriate interpreter
+    " (e.g.  PHP, ruby, etc) and put it in a preview window.
+    func! s:run()
+        if !exists("b:fg_bin")
+            return
+        endif
 
-    let src = expand("%")
-    let dst = tempname()
+        let src = expand("%")
+        let dst = tempname()
 
-    let bin = g:fgTypes[b:fgBin][0]
-    " If the file has been saved...
-    redir > dst
-    if src != ""
-        " Run it through the interpreter and save output to a tmpfile
-        silent exe "!".bin." ".shellescape(src)
-    else
-        " Otherwise, run the contents directly through the interpreter
-        " (out to a tmpfile)
-        silent exe "w !".bin
-    endif
-    redir END
+        call s:runGump(dst)
+    endfunc
 
-    " Display it in a preview buffer
-    call MlPreview(dst)
-endfunc
+    " Run selected lines through an interpreter
+    func! s:runRange() range
+        if !exists("b:fg_bin")
+            return
+        endif
 
-" Run selected lines through an interpreter
-func! s:fgRunRange() range
-    if !exists("b:fgBin")
-        return
-    endif
+        " Temporary file to save to
+        let dst = tempname()
+        let type = g:types[b:fg_bin]
 
-    " Temporary file to save to
-    let dst = tempname()
-    let type = g:fgTypes[b:fgBin]
+        " Save code to a tmpfile
+        redir > dst
+        if get(type, 1) != 0
+            echom shellescape(type[1])
+        endif
+        echom join(getline(a:firstline, a:lastline), "\n")
+        redir END
 
-    " Save code to a tmpfile
-    redir > dst
-    if get(type, 1) != 0
-        echo shellescape(type[1])
-    endif
-    echo join(getline(a:firstline, a:lastline), "\n")
-    redir END
+        call s:runGump(dst)
+    endfunc
 
-    " Run tmpfile through interpreter and redir back to tmpfile (recycle!)
-    redir > dst
-    silent exe "!".type[0]." ".shellescape(dst)
-    redir END
+    " Open a preview window and inject output into it
+    func! s:preview(tmpfile)
+        " Open preview buffer
+        silent exe ":pedit! ".a:tmpfile
 
-    " Display it in a preview buffer
-    call MlPreview(dst)
-endfunc
+        " Switch to preview window
+        wincmd P
+        setl buftype=nofile noswapfile syntax=none bufhidden=delete
+        nnoremap <buffer> <Esc> :pclose<CR>
 
-" Open a preview window and inject output into it
-func! s:fgPreview(tmpfile)
-    " Open preview buffer
-    silent exe ":pedit! ".a:tmpfile
+        " Delete the temp file
+        if call delete(expand(tmpfile)) != 0
+            echoe "ForrestGump: Could not delete temp file."
+        endif
+    endfunc
 
-    " Switch to preview window
-    wincmd P
-    setl buftype=nofile noswapfile syntax=none bufhidden=delete
-    nnoremap <buffer> <Esc> :pclose<CR>
+    " For setting default filetype => bins
+    func! s:defineGump(filetype, opts)
+        if !has_key(g:types, filetype)
+            let g:types[a:filetype] = opts
+        endif
+    endfunc
 
-    " Delete the temp file
-    if call delete(expand(tmpfile)) != 0
-        echoe "ForrestGump: Could not delete temp file."
-    endif
-endfunc
+    "
+    func! s:runGump(file)
+        " See if b:fg_bin exists
+        if !executable(b:fg) != 1
+            echoe "ERROR: " b:fg." not found. Is it installed?"
+            return 0
+        endif
 
-" For setting default filetype => bins
-func! s:fgDefineGump(filetype, opts)
-    if !has_key(g:fgTypes, filetype)
-        let g:fgTypes[a:filetype] = opts
-    endif
-endfunc
+        let prefix = expand("%") == "" ? 'w ' : ''
+        
+        " Run tmpfile through interpreter and redir back to tmpfile (recycle!)
+        redir! > dst
+        echo system(prefix."!".b:fg_bin." ".shellescape(a:file))
+        redir END
 
-" Default gumps
-call s:fgDefineGump("php",          ["php", "<?php"])
-call s:fgDefineGump("python",       ["python"])
-call s:fgDefineGump("ruby",         ["ruby"])
-call s:fgDefineGump("perl",         ["perl"])
-call s:fgDefineGump("javascript",   ["node"])
-call s:fgDefineGump("coffee",       ["coffee"])
-call s:fgDefineGump("sh",           ["sh"])
+        " Display it in a preview buffer
+        call MlPreview(dst)
+
+        return 1
+    endfunc
+
+" }}
 
 
 """"""""""""""""""""""""""
-" Mappings
+" Bootstrap {{
 
-map <Plug>fgRunAll :<C-U>call <SID>fgRun()<CR>
-map <Plug>fgRunRange :<C-U>call <SID>fgRunRange()<CR>
+    " Default gumps
+    call s:defineGump("php",          ["php", "<?php"])
+    call s:defineGump("python",       ["python"])
+    call s:defineGump("ruby",         ["ruby"])
+    call s:defineGump("perl",         ["perl"])
+    call s:defineGump("javascript",   ["node"])
+    call s:defineGump("coffee",       ["coffee"])
+    call s:defineGump("sh",           ["sh"])
 
-if g:fgNoMappings != 1
-    nmap <leader>r <Plug>fgRunAll
-    vmap <leader>r <Plug>fgRunRange
+    " Maps
+    map <Plug>fgRunAll :<C-U>call <SID>run()<CR>
+    map <Plug>fgRunRange :<C-U>call <SID>runRange()<CR>
 
-    nmap <D-r> <Plug>fgRunAll
-    nmap <D-R> <Plug>fgRunRange
-    vmap <D-r> <Plug>fgRunAll
-    vmap <D-R> <Plug>fgRunRange
-endif
+    if g:noMappings != 1
+        nmap <leader>r <Plug>fgRunAll
+        vmap <leader>r <Plug>fgRunRange
 
+        nmap <D-r> <Plug>fgRunAll
+        nmap <D-R> <Plug>fgRunRange
+        vmap <D-r> <Plug>fgRunAll
+        vmap <D-R> <Plug>fgRunRange
+    endif
+
+" }}
 
 " vim: set foldmarker={,} foldlevel=0 foldmethod=marker
