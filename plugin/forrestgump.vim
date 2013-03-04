@@ -108,7 +108,7 @@ let g:loaded_forrestgump = 1
 " Bootstrap {{
 
     " Default gumps
-    call s:defineGump("php",          ["php", "<?php"])
+    call s:defineGump("php",          ["php", "<?php "])
     call s:defineGump("python",       ["python"])
     call s:defineGump("ruby",         ["ruby"])
     call s:defineGump("perl",         ["perl"])
