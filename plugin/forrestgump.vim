@@ -3,23 +3,24 @@
 " Version: 0.0.2
 " Author:  Henrik Lissner <http://henrik.io>
 
-if exists("g:loadedForrestGump")
+if exists("g:loaded_forrestgump")
     finish
 endif
-let g:loadedForrestGump = 1
+let g:loaded_forrestgump = 1
 
 
 """"""""""""""""""""""""""
-" Defaults
+" Defaults {{
 
-if !exists("b:fg_bin")
-    let b:fg_bin = ""
-endif
+    if !exists("b:fg_bin")
+        let b:fg_bin = ""
+    endif
 
-if !exists(g:types)
-    let g:types = {}
-endif
+    if !exists(g:types)
+        let g:types = {}
+    endif
 
+" }}
 
 """"""""""""""""""""""""""
 " Functions {{
@@ -103,7 +104,6 @@ endif
     endfunc
 
 " }}
-
 
 """"""""""""""""""""""""""
 " Bootstrap {{
