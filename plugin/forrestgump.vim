@@ -1,6 +1,6 @@
 " *vim-forrestgump*     Run code on-the-fly in vim
 "
-" Version: 1.0.0
+" Version: 1.0.1
 " Author:  Henrik Lissner <http://henrik.io>
 
 if exists("g:loaded_forrestgump")
