@@ -1,6 +1,6 @@
 " *vim-forrestgump*     Run code on-the-fly in vim
 "
-" Version: 0.1.0
+" Version: 1.0.0
 " Author:  Henrik Lissner <http://henrik.io>
 
 if exists("g:loaded_forrestgump")
@@ -9,95 +9,69 @@ endif
 let g:loaded_forrestgump = 1
 
 
-""""""""""""""""""""""""""
-" Defaults {
+" Defaults
 
-    if !exists("g:forrestgump_no_mappings")
-        let g:forrestgump_no_mappings = 0 
-    endif
+if !exists("g:forrestgumps")
+    let g:forrestgumps = {}
+endif
 
-    if !exists("g:forrestgump_types")
-        let g:forrestgump_types = {}
-    endif
+if !exists("g:forrestgump_no_mappings")
+    let g:forrestgump_no_mappings = 0
+endif
 
-    if !exists("b:forrestgump_bin")
-        let b:forrestgump_bin = 0
-    endif
 
-" }
-
-""""""""""""""""""""""""""
 " Functions {
 
     " run() {
-    " Run entire current file (or line) through the appropriate interpreter
-    " (e.g.  PHP, ruby, etc) and put it in a preview window.
-    func! s:run()
-        if !s:findGump()
+    func! s:runFile()
+        let gump = s:findGump()
+        if type(gump) != 3
             return
         endif
 
-        call s:runGump(tempname())
-    endfunc
-    " }
-
-    " runRage() {
-    " Run selected lines through an interpreter
-    func! s:runRange() range
-        if !s:findGump()
-            return
-        endif
-
-        " Temporary file to save to
-        let dst = tempname()
-        let type = g:forrestgump_types[b:forrestgump_bin]
-
-        let code = join(getline(a:firstline, a:lastline), "\n")
-
-        " Save code to a tmpfile
-        redir! > dst
-        if get(type, 1) != 0
-            let prepend = shellescape(type[1])
-            if match(code, "\V".prepend) == -1
-                echom prepend
-            endif
-        endif
-        echom code
-        redir END
-
-        call s:runGump(dst)
-    endfunc
-    " }
-
-    " runGump(file) {
-    func! s:runGump(file)
-        " See if b:forrestgump_bin exists
-        if !executable("b:forrestgump_bin") != 1
-            echoe "ERROR: ".b:forrestgump_bin." not found. Is it installed?"
-            return
-        endif
-
-        let prefix = strlen(expand("%")) != 0 ? '' : 'w '
-        let file = shellescape(a:file)
-        let current_file = expand("%")
-
-        " Run tmpfile through interpreter and redir back to tmpfile (recycle!)
-        if strlen(current_file) != 0
-            silent exe "!".b:forrestgump_bin." ".current_file." > ".file
+        " Run the file or its contents through the gump and store output in
+        " a tmepfile
+        let tempfile = tempname()
+        let file = expand('%:p')
+        if strlen(file)
+            silent exe "!".gump[0]." ".shellescape(file)." > ".shellescape(tempfile)
         else
-            silent exe "w !".b:forrestgump_bin." > ".file
+            silent exe "w !".gump[0]." > ".shellescape(tempfile)
         endif
-        
-        " Display it in a preview buffer
-        call s:preview(a:file)
+
+        " Open tempfile in preview
+        call s:preview(tempfile)
     endfunc
     " }
 
+    " runLines() {
+    func! s:runLines() range
+        let gump = s:findGump()
+        if type(gump) != 3
+            return
+        endif
+
+        " Grab the code. Prepend the second list item if it exists, and if it
+        " isn't present in the code being run.
+        let code = join(getline(a:firstline, a:lastline), "\n")
+        if len(gump) == 2 && match(code, gump[1]) == -1
+            let code = gump[1] . " \n " . code
+        endif
+
+        " Run code through the gump and send output to tempfile
+        let tempfile = tempname()
+        call system(gump[0]." > ".shellescape(tempfile), code)
+
+        " Open tempfile in preview
+        call s:preview(tempfile)
+    endfunc
+    " }
+    
     " preview() {
     " Open a preview window and inject output into it
     func! s:preview(tmpfile)
         if !filereadable(expand(a:tmpfile))
-            echoe "ERROR: Tmpfile does not exist. Preview couldn't be created. (".a:tmpfile.")"
+            echoe "Tmpfile missing. Preview couldn't be created. (".a:tmpfile.")"
             return
         endif
 
@@ -109,18 +83,9 @@ let g:loaded_forrestgump = 1
         setl buftype=nofile noswapfile syntax=none bufhidden=delete
         nnoremap <buffer> <Esc> :pclose<CR>
 
-        " Delete the temp file
+        " delete the temp file
         if delete(expand(a:tmpfile)) != 0
-            echoe "ERROR: Could not delete temp file. (".a:tmpfile.")"
-        endif
-    endfunc
-    " }
-
-    " defineGump {
-    " For setting default filetype => bins
-    func! s:defineGump(filetype, opts)
-        if !has_key(g:forrestgump_types, a:filetype)
-            let g:forrestgump_types[a:filetype] = a:opts
+            echoe "could not delete temp file. (".a:tmpfile.")"
         endif
     endfunc
     " }
@@ -128,20 +93,40 @@ let g:loaded_forrestgump = 1
     " findGump() {
     " Check to see if a gump for the current filetype exists or not
     func! s:findGump()
-        if b:forrestgump_bin == 0
-            if !strlen(&filetype)
-                echom "No filetype specified!"
-                return
-            endif
-            let ft = split(&filetype, "\\.")[0]
-            if has_key(g:forrestgump_types, ft)
-                let b:forrestgump_bin = g:forrestgump_types[ft][0]
-            else
-                echom "No gump available for this filetype!"
-                return
-            endif
+        " No filetype? No gump!
+        if !strlen(&filetype)
+            echom "No filetype specified!"
+            return
         endif
-        return 1
+
+        " Find which setting is approrpriate for the current filetype. If one
+        " doesn't exist, return 0. If the filetype is a two parter (e.g.
+        " scss.css), only use the first part to represent the filetype.
+        let ft = split(&filetype, "\\.")[0]
+        if has_key(g:forrestgumps, ft)
+            let gump = g:forrestgumps[ft]
+
+            if type(gump) != 3 || get(gump, 0) != 0
+                echoe "Gump for ".&filetype." isn't set up properly."
+                return
+            elseif !executable(gump[0])
+                echoe "Gump for ".&filetype." isn't executable. Is it installed? (".gump[0].")"
+                return
+            endif
+            return gump
+        endif
+
+        echom "No gump available for this filetype!"
+        return
+    endfunc
+    " }
+
+    " defineGump {
+    " For associating default filetypes to interpreters 
+    func! s:defineGump(filetype, opts)
+        if !has_key(g:forrestgumps, a:filetype)
+            let g:forrestgumps[a:filetype] = a:opts
+        endif
     endfunc
     " }
 
@@ -151,7 +136,7 @@ let g:loaded_forrestgump = 1
 " Bootstrap {
 
     " Default gumps
-    call s:defineGump("php",          ["php", "<?php "])
+    call s:defineGump("php",          ["php", "<?php"])
     call s:defineGump("python",       ["python"])
     call s:defineGump("ruby",         ["ruby"])
     call s:defineGump("perl",         ["perl"])
@@ -160,18 +145,12 @@ let g:loaded_forrestgump = 1
     call s:defineGump("sh",           ["sh"])
 
     " Maps
-    map <Plug>fgRunFile :<C-U>call <SID>run()<CR>
-    map <Plug>fgRunRange :<C-U>call <SID>runRange()<CR>
+    map <silent> <Plug>ForrestRunFile :call <SID>runFile()<CR>
+    map <silent> <Plug>ForrestRunLines :call <SID>runLines()<CR>
 
     if g:forrestgump_no_mappings != 1
-        nmap <leader>r <Plug>fgRunFile
-        nmap <leader>R <Plug>fgRunRange
-        vmap <leader>r <Plug>fgRunRange
-
-        nmap <D-r> <Plug>fgRunFile
-        nmap <D-R> <Plug>fgRunRange
-        vmap <D-r> <Plug>fgRunFile
-        vmap <D-R> <Plug>fgRunRange
+        nmap <leader>r <Plug>ForrestRunFile
+        vmap <leader>r <Plug>ForrestRunLines
     endif
 
 " }

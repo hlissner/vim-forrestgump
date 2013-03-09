@@ -8,14 +8,11 @@ window. The latter would run selected code (or the current line).
 
 This simple plugin aims to mimic that.
 
-It works out of the box with PHP, Ruby, Python and sh script (interpreted
-languages).
-
 ## Languages supported
 
 The following interpreters should work out of the box.
 
-    let g:forrestgump_types = {
+    let g:forrestgumps = {
         "php":        ["php", "<?php "],
         "python":     ["python"],
         "ruby":       ["ruby"],
@@ -31,5 +28,4 @@ The following interpreters should work out of the box.
 ## Usage
 
     nmap <leader>r      Run entire file (doesn't have to be saved)
-    nmap <leader>R      Run current line(s)
     vmap <leader>r      Run current or selected line(s)
