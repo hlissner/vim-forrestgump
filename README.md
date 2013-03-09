@@ -17,7 +17,7 @@ The following interpreters should work out of the box.
         "python":     ["python"],
         "ruby":       ["ruby"],
         "perl":       ["perl"],
-        "javascript": ["javascript"],
+        "javascript": ["node"],
         "coffee":     ["coffee"],
         "sh":         ["sh"]
         

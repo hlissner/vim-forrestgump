@@ -41,7 +41,7 @@ SETTINGS                                        *forrestgump-settings*
         "python":     ["python"],
         "ruby":       ["ruby"],
         "perl":       ["perl"],
-        "javascript": ["javascript"],
+        "javascript": ["node"],
         "coffee":     ["coffee"],
         "sh":         ["sh"]
         
