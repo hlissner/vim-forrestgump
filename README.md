@@ -25,6 +25,8 @@ The following interpreters should work out of the box.
         "&filetype":  ["/usr/bin/&filetype", "Prepend this to code"]
     }
 
+If no filetype is set, it will try to find a shebang line in the script.
+
 ## Usage
 
     nmap <leader>r      Run entire file (doesn't have to be saved)
