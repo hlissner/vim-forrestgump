@@ -1,6 +1,6 @@
 " *vim-forrestgump*     Run code on-the-fly in vim
 "
-" Version: 1.0.1
+" Version: 1.0.2
 " Author:  Henrik Lissner <http://henrik.io>
 
 if exists("g:loaded_forrestgump")
@@ -93,30 +93,46 @@ endif
     " findGump() {
     " Check to see if a gump for the current filetype exists or not
     func! s:findGump()
-        " No filetype? No gump!
-        if !strlen(&filetype)
-            echom "No filetype specified!"
-            return
+        " No filetype?
+        if strlen(&filetype)
+            let ft = split(&filetype, "\\.")[0]
+            if has_key(g:forrestgumps, ft)
+                let gump = g:forrestgumps[ft]
+            endif
+        else
+            " Check for shebang line
+            let firstline = getline(1)
+            if firstline[0:1] !=# "#!"
+                " Otherwise, no gump!
+                echom "No filetype specified! (".firstline[0:1].")"
+                return
+            endif
+
+            let gump = [substitute(firstline[2:], '^\s*\(.\{-}\)\s*$', '\1', '')]
+            let gumplen = strlen(gump[0])
+            if gumplen > 0
+                let ft = split(split(firstline[2:], '/')[-1])[-1]
+                if has_key(g:forrestgumps, ft)
+                    let gump = g:forrestgumps[ft]
+                    exe "setf ".ft
+                endif
+            elseif gumplen == 0
+                unlet gump
+            endif
         endif
 
-        " Find which setting is approrpriate for the current filetype. If one
-        " doesn't exist, return 0. If the filetype is a two parter (e.g.
-        " scss.css), only use the first part to represent the filetype.
-        let ft = split(&filetype, "\\.")[0]
-        if has_key(g:forrestgumps, ft)
-            let gump = g:forrestgumps[ft]
-
+        if exists("gump")
             if type(gump) != 3 || get(gump, 0) != 0
-                echoe "Gump for ".&filetype." isn't set up properly."
+                echoe "Gump for ".&filetype." isn't set up properly"
                 return
             elseif !executable(gump[0])
-                echoe "Gump for ".&filetype." isn't executable. Is it installed? (".gump[0].")"
+                echoe "Gump for ".&filetype." isn't executable (".gump[0].")"
                 return
             endif
             return gump
         endif
 
-        echom "No gump available for this filetype!"
+        echom "No gump available for this filetype"
         return
     endfunc
     " }
@@ -141,8 +157,11 @@ endif
     call s:defineGump("ruby",         ["ruby"])
     call s:defineGump("perl",         ["perl"])
     call s:defineGump("javascript",   ["node"])
+    call s:defineGump("js",           ["node"])
     call s:defineGump("coffee",       ["coffee"])
     call s:defineGump("sh",           ["sh"])
+    call s:defineGump("bash",         ["bash"])
+    call s:defineGump("zsh",          ["zsh"])
 
     " Maps
     map <silent> <Plug>ForrestRunFile :call <SID>runFile()<CR>
