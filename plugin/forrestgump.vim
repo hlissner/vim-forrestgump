@@ -114,7 +114,6 @@ endif
                 let ft = split(split(firstline[2:], '/')[-1])[-1]
                 if has_key(g:forrestgumps, ft)
                     let gump = g:forrestgumps[ft]
-                    exe "setf ".ft
                 endif
             elseif gumplen == 0
                 unlet gump
