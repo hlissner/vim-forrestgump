@@ -153,6 +153,7 @@ endif
     " Default gumps
     call s:defineGump("php",          ["php", "<?php"])
     call s:defineGump("python",       ["python"])
+    call s:defineGump("py",           ["python"])
     call s:defineGump("ruby",         ["ruby"])
     call s:defineGump("perl",         ["perl"])
     call s:defineGump("javascript",   ["node"])
@@ -161,6 +162,7 @@ endif
     call s:defineGump("sh",           ["sh"])
     call s:defineGump("bash",         ["bash"])
     call s:defineGump("zsh",          ["zsh"])
+    call s:defineGump("lua",          ["lua"])
 
     " Maps
     map <silent> <Plug>ForrestRunFile :call <SID>runFile()<CR>
