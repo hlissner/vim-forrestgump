@@ -1,6 +1,6 @@
 " *vim-forrestgump*     Run code on-the-fly in vim
 "
-" Version: 1.0.2
+" Version: 1.0.3
 " Author:  Henrik Lissner <http://henrik.io>
 
 if exists("g:loaded_forrestgump")
@@ -31,16 +31,16 @@ endif
 
         " Run the file or its contents through the gump and store output in
         " a tmepfile
-        let tempfile = tempname()
         let file = expand('%:p')
         if strlen(file)
-            silent exe "!".gump[0]." ".shellescape(file)." > ".shellescape(tempfile)
+            let result = system(gump[0]." ".file)
         else
-            silent exe "w !".gump[0]." > ".shellescape(tempfile)
+            let contents = getline(1, "$")
+            let result = system(gump[0], join(contents, "\n"))
         endif
 
         " Open tempfile in preview
-        call s:preview(tempfile)
+        call s:preview(result)
     endfunc
     " }
 
@@ -59,34 +59,27 @@ endif
         endif
 
         " Run code through the gump and send output to tempfile
-        let tempfile = tempname()
-        call system(gump[0]." > ".shellescape(tempfile), code)
+        let result = system(gump[0], code)
 
         " Open tempfile in preview
-        call s:preview(tempfile)
+        call s:preview(result)
     endfunc
     " }
     
     " preview() {
     " Open a preview window and inject output into it
-    func! s:preview(tmpfile)
-        if !filereadable(expand(a:tmpfile))
-            echoe "Tmpfile missing. Preview couldn't be created. (".a:tmpfile.")"
-            return
-        endif
-
+    func! s:preview(content)
         " Open preview buffer
-        silent exe ":pedit! ".a:tmpfile
+        pedit! RESULTS
 
         " Switch to preview window
         wincmd P
         setl buftype=nofile noswapfile syntax=none bufhidden=delete
-        nnoremap <buffer> <Esc> :pclose<CR>
+        normal ggdG
 
-        " delete the temp file
-        if delete(expand(a:tmpfile)) != 0
-            echoe "could not delete temp file. (".a:tmpfile.")"
-        endif
+        " Write it into the window
+        call append('^', split(a:content, "\n"))
+        nnoremap <buffer> <Esc> :pclose<CR>
     endfunc
     " }
 
